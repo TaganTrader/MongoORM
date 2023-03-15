@@ -1,0 +1,17 @@
+{
+  "name": "mongo-orm",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bin/index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "Alexander Asrumyan",
+  "license": "ISC",
+  "dependencies": {
+    "mongodb": "^5.1.0"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0"
+  }
+}
