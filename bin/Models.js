@@ -189,10 +189,11 @@ class Model {
     }
     changesToMongoChanges(changes, setted, unsetted, root) {
         for (let key in changes) {
-            if (changes[key].$unset)
-                unsetted[root + (root !== '' ? '.' : '') + key] = true;
-            else if (Object.prototype.toString.call(changes[key]) === '[object Object]') {
-                this.changesToMongoChanges(changes[key], setted, unsetted, root + (root !== '' ? '.' : '') + key);
+            if (Object.prototype.toString.call(changes[key]) === '[object Object]') {
+                if (changes[key].$unset)
+                    unsetted[root + (root !== '' ? '.' : '') + key] = true;
+                else
+                    this.changesToMongoChanges(changes[key], setted, unsetted, root + (root !== '' ? '.' : '') + key);
             }
             else {
                 setted[root + (root !== '' ? '.' : '') + key] = changes[key];
