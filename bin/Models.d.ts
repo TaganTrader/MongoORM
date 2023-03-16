@@ -28,7 +28,8 @@ export declare class Model {
     updated_at: Date | number;
     constructor(fills?: any);
     changes(): any;
-    save(needInsert?: boolean, sortProperties?: boolean): Promise<void>;
+    private changesToMongoChanges;
+    save(needInsert?: boolean, bigUpdate?: boolean, sortProperties?: boolean): Promise<void>;
     delete(): Promise<import("mongodb").UpdateResult | undefined>;
     serialize(): any;
     static findMany<T extends Model>(this: Constructor<T>, filter?: Filter<T>, options?: FindOptions<Document>): Promise<T[]>;

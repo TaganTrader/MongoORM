@@ -187,7 +187,19 @@ class Model {
     changes() {
         return exports.deepDiffMapperUpdated.map(this.$private.original, this.$private.updated);
     }
-    async save(needInsert, sortProperties) {
+    changesToMongoChanges(changes, setted, unsetted, root) {
+        for (let key in changes) {
+            if (changes[key].$unset)
+                unsetted[root + (root !== '' ? '.' : '') + key] = true;
+            else if (Object.prototype.toString.call(changes[key]) === '[object Object]') {
+                this.changesToMongoChanges(changes[key], setted, unsetted, root + (root !== '' ? '.' : '') + key);
+            }
+            else {
+                setted[root + (root !== '' ? '.' : '') + key] = changes[key];
+            }
+        }
+    }
+    async save(needInsert = false, bigUpdate = false, sortProperties = false) {
         const db = DB_1.default.dbs[this.$db];
         let changes = this.changes();
         if (!changes || Object.keys(changes).length == 0)
@@ -196,22 +208,26 @@ class Model {
             if (sortProperties)
                 changes = sortObject(changes);
             if (!needInsert && typeof this.$private.updated[this.$primaryKey] !== "undefined") {
-                const unseted = {};
-                for (let prop in changes) {
-                    if (changes[prop].$unset) {
-                        unseted[prop] = true;
-                        delete changes[prop];
-                    }
-                    else {
-                        changes[prop] = this.$private.updated[prop];
+                let setted = {}, unsetted = {};
+                if (!bigUpdate)
+                    this.changesToMongoChanges(changes, setted, unsetted, '');
+                else {
+                    for (let prop in changes) {
+                        if (changes[prop].$unset) {
+                            unsetted[prop] = true;
+                            delete changes[prop];
+                        }
+                        else {
+                            setted[prop] = this.$private.updated[prop];
+                        }
                     }
                 }
                 let setUnset = {};
-                if (Object.keys(changes).length > 0) {
-                    setUnset.$set = changes;
+                if (Object.keys(setted).length > 0) {
+                    setUnset.$set = setted;
                 }
-                if (Object.keys(unseted).length > 0) {
-                    setUnset.$unset = unseted;
+                if (Object.keys(unsetted).length > 0) {
+                    setUnset.$unset = unsetted;
                 }
                 await db.collection(this.$table).updateOne({
                     [this.$primaryKey]: this.$private.updated[this.$primaryKey]

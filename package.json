@@ -4,7 +4,8 @@
   "description": "",
   "main": "bin/index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "make": "node make"
   },
   "author": "Alexander Asrumyan",
   "license": "ISC",
