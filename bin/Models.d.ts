@@ -30,7 +30,7 @@ export declare class Model {
     changes(): any;
     private changesToMongoChanges;
     save(needInsert?: boolean, bigUpdate?: boolean, sortProperties?: boolean): Promise<void>;
-    delete(): Promise<import("mongodb").UpdateResult | undefined>;
+    delete(): Promise<import("mongodb").UpdateResult>;
     serialize(): any;
     static findMany<T extends Model>(this: Constructor<T>, filter?: Filter<T>, options?: FindOptions<Document>): Promise<T[]>;
     static findMany<T extends Model>(this: Constructor<T>, filter?: Filter<T>, options?: FindOptions<Document>, returnMongo?: boolean): Promise<FindCursor<T>>;

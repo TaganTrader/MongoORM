@@ -205,54 +205,54 @@ class Model {
         let changes = this.changes();
         if (!changes || Object.keys(changes).length == 0)
             return;
-        if (this.$db) {
-            if (sortProperties)
-                changes = sortObject(changes);
-            if (!needInsert && typeof this.$private.updated[this.$primaryKey] !== "undefined") {
-                let setted = {}, unsetted = {};
-                if (!bigUpdate)
-                    this.changesToMongoChanges(changes, setted, unsetted, '');
-                else {
-                    for (let prop in changes) {
-                        if (changes[prop].$unset) {
-                            unsetted[prop] = true;
-                            delete changes[prop];
-                        }
-                        else {
-                            setted[prop] = this.$private.updated[prop];
-                        }
+        if (!db)
+            throw new Error('No db seleceted');
+        if (sortProperties)
+            changes = sortObject(changes);
+        if (!needInsert && typeof this.$private.updated[this.$primaryKey] !== "undefined") {
+            let setted = {}, unsetted = {};
+            if (!bigUpdate)
+                this.changesToMongoChanges(changes, setted, unsetted, '');
+            else {
+                for (let prop in changes) {
+                    if (changes[prop].$unset) {
+                        unsetted[prop] = true;
+                        delete changes[prop];
+                    }
+                    else {
+                        setted[prop] = this.$private.updated[prop];
                     }
                 }
-                let setUnset = {};
-                if (Object.keys(setted).length > 0) {
-                    setUnset.$set = setted;
-                }
-                if (Object.keys(unsetted).length > 0) {
-                    setUnset.$unset = unsetted;
-                }
-                await db.collection(this.$table).updateOne({
-                    [this.$primaryKey]: this.$private.updated[this.$primaryKey]
-                }, setUnset, { upsert: true, ignoreUndefined: false });
             }
-            else {
-                await db.collection(this.$table).insertOne(changes);
+            let setUnset = {};
+            if (Object.keys(setted).length > 0) {
+                setUnset.$set = setted;
             }
-            if (changes[this.$primaryKey]) {
-                this.$private.updated[this.$primaryKey] = changes[this.$primaryKey];
-                this.$private.original[this.$primaryKey] = changes[this.$primaryKey];
+            if (Object.keys(unsetted).length > 0) {
+                setUnset.$unset = unsetted;
             }
+            await db.collection(this.$table).updateOne({
+                [this.$primaryKey]: this.$private.updated[this.$primaryKey]
+            }, setUnset, { upsert: true, ignoreUndefined: false });
+        }
+        else {
+            await db.collection(this.$table).insertOne(changes);
+        }
+        if (changes[this.$primaryKey]) {
+            this.$private.updated[this.$primaryKey] = changes[this.$primaryKey];
+            this.$private.original[this.$primaryKey] = changes[this.$primaryKey];
         }
         this.$private.original = JSON.parse(JSON.stringify(this.$private.updated));
     }
     async delete() {
         const db = DB_1.default.dbs[this.$db];
-        if (this.$db) {
-            return await db.collection(this.$table).updateOne({
-                [this.$primaryKey]: this.$private.updated[this.$primaryKey]
-                    ? this.$private.updated[this.$primaryKey]
-                    : false
-            }, { $set: { '__deletedAt': new Date().getTime() } });
-        }
+        if (!db)
+            throw new Error('No db seleceted');
+        return await db.collection(this.$table).updateOne({
+            [this.$primaryKey]: this.$private.updated[this.$primaryKey]
+                ? this.$private.updated[this.$primaryKey]
+                : false
+        }, { $set: { '__deletedAt': new Date().getTime() } });
     }
     serialize() {
         return Object.fromEntries(Object.entries(this.$private.updated).filter(([key]) => this.$guarded.indexOf(key) === -1));
