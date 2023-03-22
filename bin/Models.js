@@ -188,7 +188,7 @@ class Model {
         if (!this.$table)
             this.$table = generateTableName(this.constructor.name);
         if (fills) {
-            this.$private.original = clone(fills);
+            this.$private.original = JSON.parse(JSON.stringify(fills));
             this.$private.updated = clone(fills);
         }
         return new Proxy(this, modelHandler);
