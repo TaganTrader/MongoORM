@@ -108,10 +108,10 @@ function clone(obj) {
 }
 const modelHandler = {
     get: function (target, prop, recv) {
-        if (!target.$system.reflected[prop]) {
-            target.$system.reflected[prop] = true;
+        if (!target.$private.reflected[prop]) {
+            target.$private.reflected[prop] = true;
             var targetValue = Reflect.get(target, prop, recv);
-            target.$system.reflected[prop] = false;
+            delete target.$private.reflected[prop];
         }
         if (typeof targetValue === 'function') {
             return function (...args) {
@@ -124,6 +124,9 @@ const modelHandler = {
                     return target.$private.updated[prop];
                 }
             }
+            if (!prop.startsWith('$') && target.hasOwnProperty(prop) && (typeof target.$private.updated[prop] !== "undefined" || typeof target.$private.updated[target.$primaryKey] !== "undefined")) {
+                return target.$private.updated[prop];
+            }
             return targetValue;
         }
     },
@@ -131,10 +134,10 @@ const modelHandler = {
         const has = Reflect.has(target, prop);
         if (has) {
             let res = false;
-            if (!target.$system.reflected[prop]) {
-                target.$system.reflected[prop] = true;
+            if (!target.$private.reflected[prop]) {
+                target.$private.reflected[prop] = true;
                 res = Reflect.set(target, prop, value, recv);
-                target.$system.reflected[prop] = false;
+                delete target.$private.reflected[prop];
             }
             if (res)
                 return true;
@@ -151,6 +154,8 @@ const modelHandler = {
             throw new Error("Отказано в доступе");
         }
         else {
+            if (target.hasOwnProperty(prop))
+                delete target[prop];
             delete target.$private.updated[prop];
             return true;
         }
@@ -162,19 +167,23 @@ const modelHandler = {
         };
     },
     ownKeys(target) {
-        return Object.keys(target.$private.updated).filter(key => target.$guarded.indexOf(key) === -1);
+        if (typeof target.$private.updated[target.$primaryKey] !== "undefined")
+            return Object.keys(target.$private.updated).filter(key => target.$guarded.indexOf(key) === -1);
+        else {
+            const properties = Object.getOwnPropertyNames(target).filter(key => !key.startsWith('$'));
+            return [...new Set([
+                    ...properties,
+                    ...Object.keys(target.$private.updated).filter(key => target.$guarded.indexOf(key) === -1)
+                ])];
+        }
     }
 };
 class Model {
+    $private = { changes: {}, original: {}, updated: {}, reflected: {} };
     $db = "";
-    $private = { changes: {}, unseted: {}, original: {}, updated: {} };
-    $system = { reflected: {} };
     $table = "";
     $primaryKey = "_id";
-    $guarded = ['password'];
-    _id;
-    created_at;
-    updated_at;
+    $guarded = ["password"];
     constructor(fills) {
         if (!this.$table)
             this.$table = generateTableName(this.constructor.name);
@@ -201,9 +210,18 @@ class Model {
         }
     }
     async save(needInsert = false, bigUpdate = false, sortProperties = false) {
+        if (typeof this.beforeSave === "function")
+            this.beforeSave();
         const db = DB_1.default.dbs[this.$db];
-        let changes = this.changes();
-        if (!changes || Object.keys(changes).length == 0)
+        let changes = this.changes() || {};
+        if (typeof this[this.$primaryKey] === "undefined") {
+            Object.getOwnPropertyNames(this).map((prop) => {
+                if (!changes.hasOwnProperty(prop) && typeof this[prop] !== "undefined" && !prop.startsWith('$')) {
+                    changes[prop] = this[prop];
+                }
+            });
+        }
+        if ((Object.keys(changes).length == 0) && typeof this[this.$primaryKey] !== "undefined")
             return;
         if (!db)
             throw new Error('No db seleceted');
@@ -237,10 +255,10 @@ class Model {
         }
         else {
             await db.collection(this.$table).insertOne(changes);
+            Object.assign(this.$private.updated, changes);
         }
         if (changes[this.$primaryKey]) {
             this.$private.updated[this.$primaryKey] = changes[this.$primaryKey];
-            this.$private.original[this.$primaryKey] = changes[this.$primaryKey];
         }
         this.$private.original = JSON.parse(JSON.stringify(this.$private.updated));
     }
@@ -255,7 +273,10 @@ class Model {
         }, { $set: { '__deletedAt': new Date().getTime() } });
     }
     serialize() {
-        return Object.fromEntries(Object.entries(this.$private.updated).filter(([key]) => this.$guarded.indexOf(key) === -1));
+        if (typeof this[this.$primaryKey] !== "undefined")
+            return Object.fromEntries(Object.entries(this.$private.updated).filter(([key]) => this.$guarded.indexOf(key) === -1));
+        else
+            return Object.fromEntries(Object.entries(this).filter(([key, value]) => this.$guarded.indexOf(key) === -1 && typeof value !== "undefined"));
     }
     static async findMany(filter, options, returnMongo) {
         const $d = new this();

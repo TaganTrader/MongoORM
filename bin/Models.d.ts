@@ -17,15 +17,11 @@ declare type Constructor<T> = {
     new (fills?: any): T;
 };
 export declare class Model {
-    protected $db: string;
     protected $private: any;
-    protected $system: any;
+    protected $db: string;
     protected $table: string;
     protected $primaryKey: string;
     protected $guarded: string[];
-    _id: ObjectId;
-    created_at: Date | number;
-    updated_at: Date | number;
     constructor(fills?: any);
     changes(): any;
     private changesToMongoChanges;
