@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ObjectId = void 0;
 const mongodb_1 = require("mongodb");
+var mongodb_2 = require("mongodb");
+Object.defineProperty(exports, "ObjectId", { enumerable: true, get: function () { return mongodb_2.ObjectId; } });
 exports.default = new class DB {
     connections;
     dbs;

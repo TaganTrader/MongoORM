@@ -1,4 +1,5 @@
 import { MongoClient, Db } from "mongodb";
+export { ObjectId } from "mongodb";
 declare type DBType = "MongoDB" | "MySQL";
 declare type Config = {
     name: string;
